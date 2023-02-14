@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test</title>
+
+  <script src="https://cdn.bootcdn.net/ajax/libs/axios/1.3.2/axios.min.js"></script>
+  <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.2.47/vue.global.prod.js"></script>
+
+  <style type="text/css">
+    html,body{
+      height: 100%;
+      margin:0;
+    }
+    #app{
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+</head>
+
+<body>
+<div id="app">
+  <div>
+    <p>用户名:<input v-model="username" type="text"></p>
+    <p>密码:<input v-model="password" type="text"></p>
+    <p>
+      <button @click="test">测试</button>
+      <button @click="login">用户登录</button>
+      <button @click="getUser">获取用户数据</button>
+    </p>
+  </div>
+</div>
+
+<script>
+  var lh={
+    host:'api/index.php?r=',
+    get(url,params){return axios.get(this.host+url,{params})},
+    post(url,params){return axios.post(this.host+url,params)},
+  }
+
+  const { createApp } = Vue
+  
+  createApp({
+    data() {
+      return {
+        username:'',
+        password:''
+      }
+    },
+    created(){
+
+    },
+    methods:{
+      test(){
+        lh.post('/main/test').then(o=>{alert(JSON.stringify(o.data))})
+      },
+      login(){
+        lh.post('/user/login',{
+          username:this.username,
+          password:this.password
+        }).then(o=>{
+          alert(JSON.stringify(o.data))
+        })
+      },
+      getUser(){
+        lh.post('/user/data/get').then(o=>{alert(JSON.stringify(o.data))})
+      }
+    }
+  }).mount('#app')
+</script>
+</body>
+</html>
