@@ -33,13 +33,16 @@ class Core{
 
   //开始处理请求
   public static function start($routes){
-    //获取json或者POST表单数据
-    $tmp=json_decode(file_get_contents("php://input"), true);
-    $data=($tmp && (is_object($tmp)) || (is_array($tmp) && !empty(current($tmp))))?$tmp:$_POST;
-
     //加载请求参数
-    if(!$data)$data=$_GET;
-    self::$data=$data;
+    if($_SERVER['REQUEST_METHOD']=='GET'){
+      self::$data=$_GET;
+    }else{
+      if(isset($_SERVER['CONTENT_TYPE'])&&$_SERVER['CONTENT_TYPE']=='application/json'){
+        self::$data=json_decode(file_get_contents("php://input"), true);
+      }else{
+        self::$data=$_POST;
+      }
+    }
 
     //获取路由参数
     $route=$routes[$_GET['r']];
@@ -50,7 +53,7 @@ class Core{
     //处理必要参数
     if(isset($route['data'])){
       foreach ($route['data'] as $v){
-        if(!isset($data[$v])){//如果缺少必要参数
+        if(!isset(self::$data[$v])){//如果缺少必要参数
           if(isset(self::$events['missParam']))self::$events['missParam']($v);
           exit();
         }
@@ -70,10 +73,12 @@ class Core{
 
     //根据路由参数调用中间件
     if(isset($route['middle'])){
-      $split=explode('.', $route['middle']);
-      [$class,$func]=[self::$namespace['middle'].'\\'.$split[0],$split[1]];
-      $control=new $class;
-      $control->$func();
+      for ($i=0; $i < count($route['middle']); $i++){
+        $split=explode('.', $route['middle'][$i]);
+        [$class,$func]=[self::$namespace['middle'].'\\'.$split[0],$split[1]];
+        $control=new $class;
+        $control->$func();
+      }
     }
 
     //根据路由获取类名和方法名
