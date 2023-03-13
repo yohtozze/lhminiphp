@@ -3,39 +3,40 @@
 namespace lhmini;
 
 class Core{
-  //请求参数
+  //Request parameters
   private static $data;
 
-  //控制器和中间件的命名空间
+  //Namespace of controller and middleware
   private static $namespace=['controller'=>'','middle'=>''];
   
-  /*特殊事件
-   *缺少必要参数:missParam
-   *全局中间件:middle
-   *全局结束件:end
+  /*Special events
+   *Missing required parameter: missParam
+   *Global middleware: middle
+   *Global end piece: end
    */
   private static $events;
 
-  //修改控制器和中间件的命名空间
+  //Modify the namespace of controller and middleware
   public static function init($controller,$middle){
     self::$namespace=['controller'=>$controller,'middle'=>$middle];
   }
 
-  //设置特殊事件
+  //Set special events
   public static function setEvent($name, $callback) {
     self::$events[$name] = $callback;
   }
 
-  //获取请求参数
+  //Get request parameters
   public static function getData(){
     return self::$data;
   }
 
-  //开始处理请求
+  //Start processing request
   public static function start($routes){
-    //加载请求参数
+    //Load request parameters
     if($_SERVER['REQUEST_METHOD']=='GET'){
       self::$data=$_GET;
+      unset(self::$data['r']);
     }else{
       if(isset($_SERVER['CONTENT_TYPE'])&&$_SERVER['CONTENT_TYPE']=='application/json'){
         self::$data=json_decode(file_get_contents("php://input"), true);
@@ -44,34 +45,34 @@ class Core{
       }
     }
 
-    //获取路由参数
+    //Get route parameters
     $route=$routes[$_GET['r']];
 
-    //定义要传递给控制器方法的参数数组
+    //Define the parameter array to be passed to the controller method
     $paramsForController=[];
 
-    //处理必要参数
+    //Process necessary parameters
     if(isset($route['data'])){
       foreach ($route['data'] as $v){
-        if(!isset(self::$data[$v])){//如果缺少必要参数
+        if(!isset(self::$data[$v])){//If necessary parameters are missing
           if(isset(self::$events['missParam']))self::$events['missParam']($v);
           exit();
         }
-        array_push($paramsForController,self::$data[$v]);
+        $paramsForController[]=self::$data[$v];
       }
     }
 
-    //处理可选参数
+    //Process optional parameters
     if(isset($route['odata'])){
       foreach ($route['odata'] as $v){
-        array_push($paramsForController,self::$data[$v]??null);
+        $paramsForController[]=self::$data[$v]??null;
       }
     }
 
-    //调用全局中间件
+    //Call global middleware
     if(isset(self::$events['middle']))self::$events['middle']();
 
-    //根据路由参数调用中间件
+    //Call middleware according to routing parameters
     if(isset($route['middle'])){
       for ($i=0; $i < count($route['middle']); $i++){
         $split=explode('.', $route['middle'][$i]);
@@ -81,7 +82,7 @@ class Core{
       }
     }
 
-    //根据路由获取类名和方法名
+    //Get the class name and method name according to the route
     $split=explode('/',$_GET['r']);
     $class=self::$namespace['controller'].'\\'.ucwords(array_splice($split,0,2)[1]);
     $func=array_splice($split,0,1)[0];
@@ -89,14 +90,14 @@ class Core{
       $func.=ucwords($split[$i]);
     }
 
-    //调用控制器方法
+    //Call controller method
     $control=new $class;
     $result=$control->$func(...$paramsForController);
 
-    //调用全局结束件
+    //Call global end method
     if(isset(self::$events['end']))self::$events['end']($result);
 
-    //返回json结果
+    //Return json results
     exit(json_encode($result));
   }
 }

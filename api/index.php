@@ -2,49 +2,50 @@
 
 require __DIR__.'/Core.php';
 
-//加载路由
+//Determine routing parameters
+if(!isset($_GET['r']))exit('parameter error');
+
+//Load route
 $routes=[];
-$file=scandir(__DIR__.'/src/router/');
-array_splice($file,0,2);
-foreach($file as $v){require __DIR__.'/src/router/'.$v;}
+$routeFile=explode('/',$_GET['r'])[1]??'wrongRoute';
+if(!file_exists(__DIR__.'/src/router/'.$routeFile.'.php'))exit('parameter error');
+require __DIR__.'/src/router/'.$routeFile.'.php';
 
-//如果无匹配路由
-if(!isset($_GET['r'])||!isset($routes[$_GET['r']])){
-  exit('无匹配路由');
-}
+//If there is no matching route
+if(!isset($routes[$_GET['r']]))exit('No matching route');
 
-//修改控制器和中间件的命名空间
+//Modify the namespace of controller and middleware
 \lhmini\Core::init('lhapi\\controller','lhapi\\middleware');
 
-//自动加载
+//Autoload
 spl_autoload_register(function($class_name){
   $namespace='lhapi';
-  if(strpos($class_name,$namespace)==0){
+  if(strpos($class_name,$namespace)===0){
     $class_name=substr($class_name, strlen($namespace));
     $class_name=str_replace('\\','/',$class_name);
     require_once __DIR__.'/src'.$class_name.'.php';
   }
 });
 
-//定义特殊事件
-//缺少必要参数
+//Define special events
+//Missing required parameters
 \lhmini\Core::setEvent('missParam',function($missParam){
-  exit('缺少参数:'.$missParam);
+  exit('Missing parameter:'.$missParam);
 });
-//全局中间件
+//Global middleware
 \lhmini\Core::setEvent('middle',function(){
 
 });
-//全局结束件
+//Global end method
 \lhmini\Core::setEvent('end',function($result){
-  //处理非json格式的特殊返回结果
+  //Handle special return results in non-json format
 });
 
-//全局方法
-//获取请求参数
+//Global function
+//Get request parameters
 function getData(){
   return \lhmini\Core::getData();
 }
 
-//开始处理API请求
+//Start processing API request
 \lhmini\Core::start($routes);
